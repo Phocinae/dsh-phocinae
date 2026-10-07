@@ -1,0 +1,23 @@
+# dsh-phocinae bundle patch 层（生效序：bundle patch → profile cordis.patch.yml
+# → $DSH_HOME/cordis.patch.yml → --patch，后层胜出；bundle 增删为启动边界）
+# 插件行用包名引用（name: dsh-phocinae），让 Node 解析定位安装后的代码。
+- insert:
+  - id: phocinae
+    name: dsh-phocinae
+    config:
+      # 斑海豹本地决策服务（laya.Agent 起本地服务，TypeSafe /v1/systemone 兼容面）
+      endpoint: http://127.0.0.1:8155/v1/systemone
+      # 模型名按后端协议透传
+      model: Phocinae-Largha-150M-v1
+      # 单次请求超时（ms）。CPU 单线程约 1.47s，3s 预算充裕
+      timeoutMs: 3000
+      # 审批门（PreToolUse 类，tools/pre-execute → hooks/guard.js）
+      gate:
+        enabled: true
+        # noul 风险概率 >= threshold → 判高风险
+        threshold: 0.8
+        # deny=硬阻断；ask=转人工确认
+        mode: deny
+        # 被门控的工具名列表（dsh bash 工具）
+        tools:
+          - bash

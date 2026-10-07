@@ -1,0 +1,40 @@
+{
+  "name": "dsh-phocinae",
+  "version": "0.1.0",
+  "description": "斑海豹（Phocinae-Largha-150M-v1）本地非生成式决策模型接入 DeepSeek Harness (dsh) 的插件 bundle：phocinae_ask 决策工具 + 内置 skill phocinae + 命令审批门。",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./guard": "./hooks/guard.js",
+    "./tools/phocinae_ask": "./tools/phocinae_ask.js"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "tools/",
+    "hooks/",
+    "skills/",
+    "scripts/"
+  ],
+  "scripts": {
+    "validate": "node scripts/validate.mjs"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "dsh-bundle",
+    "phocinae",
+    "decision-model",
+    "approval-gate",
+    "systemone"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}
