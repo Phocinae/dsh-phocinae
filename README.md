@@ -5,8 +5,8 @@
 
 ## 定位
 
-- dsh = DeepSeek Harness（MIT，「everything is a plugin」，Cordis 插件内核）。本包仿社区 `noetion/dsh-jev` 先例：plugin id = `phocinae`、工具 = `phocinae_ask`、内置 skill = `phocinae`、含审批门。
-- 斑海豹（144.3M 参数）：非生成式、单遍判定。typed-decisions en 0.797 / zh 0.789；选项序翻转率 0.0187；8k 上下文；CPU 单线程约 1.47s（GPU fp16 p50 18.6ms）。以本地服务（laya.Agent）形态接入，协议兼容 TypeSafe `/v1/systemone`。
+- dsh = DeepSeek Harness（MIT，「everything is a plugin」，Cordis 插件内核）。本包仿 dsh 社区插件先例：plugin id = `phocinae`、工具 = `phocinae_ask`、内置 skill = `phocinae`、含审批门。
+- 斑海豹（150M 级，实参 144.3M）：非生成式、单遍判定。typed-decisions en 0.797 / zh 0.789；选项序翻转率 rev 0.0300（越低越好）；8k 上下文；CPU 单线程约 1.51s，GPU fp16 p50 18.6ms。以本地服务形态接入，协议兼容 TypeSafe `/v1/systemone`。
 - 斑海豹**不做主对话模型**——只以「钩子/工具调用的本地决策服务」形态嵌入。
 
 ## 目录结构
@@ -23,25 +23,25 @@ dsh-phocinae/
 ├── README.md
 └── LICENSE             # Apache-2.0
 ```
+
 ## 安装
 
 前置：
 
-- Node.js ≥ 22.19（或 ≥ 24）；dsh CLI（Developer Preview，目标 0.1.5-rc 线）
+- Node.js ≥ 22.19（或 ≥ 24）；dsh CLI（Developer Preview）
 - 本地斑海豹服务已启动（默认 http://127.0.0.1:8155）
 
-方式 A —— 本地 npm pack（本包不上 npm，推荐）：
+方式 A —— npm 安装（推荐）：
 
 ```
-npm pack --dry-run                 # 先校验 tarball 内容
-npm pack                           # 产出 dsh-phocinae-0.1.0.tgz
-dsh plugin --profile <name> add ./dsh-phocinae-0.1.0.tgz
+npm i dsh-phocinae
+dsh plugin --profile <name> add dsh-phocinae
 ```
 
-方式 B —— git 直装（参照 noetion/dsh-jev 路径，本包纯 JS 免构建）：
+方式 B —— git 直装（本包纯 JS 免构建）：
 
 ```
-dsh plugin --profile <name> add github:<org>/dsh-phocinae#<commit-sha>
+dsh plugin --profile <name> add github:Phocinae/dsh-phocinae#<commit-sha>
 ```
 
 - 建议 pin commit（#sha）防后推篡改；
@@ -61,7 +61,7 @@ dsh plugin --profile <name> add github:<org>/dsh-phocinae#<commit-sha>
 - 全程本地：默认只连回环地址 127.0.0.1:8155，无任何外网上传、遥测或第三方转发；
 - 无凭据：本地服务不鉴权，包内不含任何密钥、不收集环境变量外传；
 - 审批门 fail-safe：服务不可达/超时/异常 → 默认 ask（不放行），绝不静默通过；
-- 本包不发布 npm（本地开发包），分发用 pack / git 直装；模型权重许可见 HF 模型卡（另案）。
+- 模型权重许可见 HF 模型卡。
 
 ## License
 

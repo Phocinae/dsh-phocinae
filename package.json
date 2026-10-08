@@ -1,6 +1,6 @@
 {
   "name": "dsh-phocinae",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "斑海豹（Phocinae-Largha-150M-v1）本地非生成式决策模型接入 DeepSeek Harness (dsh) 的插件 bundle：phocinae_ask 决策工具 + 内置 skill phocinae + 命令审批门。",
   "license": "Apache-2.0",
   "type": "module",
