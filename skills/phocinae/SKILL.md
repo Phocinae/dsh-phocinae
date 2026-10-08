@@ -1,44 +1,89 @@
----
-name: phocinae
-description: 斑海豹（Phocinae-Largha-150M-v1）本地决策模型 skill。把批量判断题、选择题、打分题、审批预判等「快决策」交给本地斑海豹服务一次性判定。适合需要快速、稳定、可阈值化、可审计的结构化判定；不可用于文本生成。
----
+# phocinae — local decision model
 
-# phocinae —— 斑海豹本地决策 skill
+Use the local Phocinae decision model (`Phocinae-Largha-150M-v1`) for **fast,
+repeatable, thresholdable judgements** instead of spending a large-model call on
+them.
 
-## 何时使用
+## When to use it
 
-- **noul 判断题**：是/否、该不该、可不可、有没有风险——需要快速且前后一致（选项序翻转率 0.0217（flip400；越低越好））
-- **choice 选择题**：从候选里挑一项（返回选项下标）
-- **score 打分题**：2–10 整数分（风险、匹配度、紧急度、质量）
-- **审批预判**：命令/工具执行前先问「是否高风险」，配合审批门阈值使用
-- **不适合**：文本生成、代码编写、长文推理——斑海豹是非生成式单遍判定模型（144.3M，8k 上下文，CPU 单线程约 1.51s），不是对话模型
+Reach for `phocinae_ask` when the question has a small, enumerable answer set and
+you would otherwise ask a language model to pick one:
 
-## 如何提问（phocinae_ask 工具）
+- **yes/no checks** — is this risky, does this match, should this proceed
+- **single-choice routing** — which tool, which queue, which category
+- **ordinal scoring** — severity, urgency, confidence, quality, 2–10
+- **batch triage** — screen a list of items with one call rather than one call each
+- **approval pre-screening** — judge a command before running it
 
-一次调用可混发多道题：
+Reach for `phocinae_gate` when you want a second opinion on **one command or
+action** before taking it. It returns `allow` / `ask` / `deny`, and the same
+judgement already runs automatically before every screened tool call.
 
-- `state`：待决策情境的**完整原文**（照抄不改写、不省略关键信息——措辞扰动可能翻转判定）
-- `questions`：数组，每题 `{id, type}`：
-  - `noul` → 布尔答案 true/false；可选 `threshold`（为 true 的概率须超过阈值才返回 true）
-  - `choice` → 必带 `options`，答案 = 选中项下标（整数，从 0 起）
-  - `score` → 2–10 整数
+## When not to use it
 
-示例：
+The model does not generate text. It cannot write, summarise, translate, answer
+knowledge questions, reason over long documents, or hold a conversation. Asking it
+to do any of those produces a confident, meaningless answer.
 
-{state: "用户请求执行 rm -rf /tmp/build-cache && make clean",
- questions: [{id:"risk", type:"noul", threshold:0.8},
-             {id:"severity", type:"score"}]}
-## 审批门流程（tools/pre-execute → guard → 本地服务）
+## How to ask
 
-1. 被门控工具（默认 bash）执行前，dsh 触发 `tools/pre-execute`；
-2. `hooks/guard.js` 把「工具名+输入」整理成 noul 风险题，POST 到本地服务；
-3. 风险概率 ≥ `gate.threshold`（默认 0.8）→ `deny`（硬阻断）或 `ask`（转人工）；否则放行；
-4. 服务不可达/超时 → fail-safe 转 `ask`，**绝不静默放行**；
-5. 服务地址：http://127.0.0.1:8155/v1/systemone（`cordis.patch.yml` 可改）。
+One call carries several questions against **one** state:
 
-## 使用纪律
+```
+phocinae_ask({
+  state: "<the decision context, verbatim>",
+  questions: [
+    { id: "risk",     type: "noul",   threshold: 0.8 },
+    { id: "action",   type: "choice", options: ["continue", "review", "stop"] },
+    { id: "severity", type: "score" }
+  ]
+})
+```
 
-- `state` 用原文，不代改措辞、不压缩关键选项；
-- 答案只读不臆造：服务不可达/解析失败时如实告知，不猜答案；
-- 阈值统一在配置里管（`gate.threshold` / 题级 `threshold`），不在提示词里现编；
-- 斑海豹只基于你给的 `state` 判定，不联网、无外部知识。
+Three rules decide whether the answer is worth anything:
+
+1. **Paste the state verbatim.** Do not paraphrase, condense, or reorganise it.
+   The model reads exactly what you send and nothing else; measured option-order
+   and wording sensitivity is real, and a rewritten state is a different question.
+2. **Put the candidate text in `options`.** A `choice` question is only as good as
+   its option strings — prefer `"human_review: queue this for a human"` over
+   `"2"`. Long options are truncated by the encoder, so lead with the
+   distinguishing words.
+3. **Set `threshold` deliberately** on `noul` questions. It is the probability at
+   which the answer flips to `true`; the default of 0.5 is a coin flip's edge, not
+   a considered cut.
+
+## Reading the answer
+
+Every answer comes back with a calibrated confidence and an `escalate` flag:
+
+- `escalate: false` — the model was confident; use the answer.
+- `escalate: true` — the confidence fell below the threshold (default 0.6). The
+  answer is still the model's best guess, but it is the case to hand to a larger
+  model, or to a human.
+
+**Do not treat a low-confidence answer as a decision.** The measured behaviour on
+the decision benchmark is that answers kept above the threshold are markedly more
+accurate than answers below it, which is the whole point of the flag. When
+`escalate` is true and the decision matters, escalate — do not proceed on it and
+do not silently re-ask hoping for a different answer; the model is deterministic,
+so a repeat returns the same verdict.
+
+Report which answers were escalated when you summarise a batch. A caller who
+knows three of twenty items were uncertain can act on that; one who is told
+"twenty items classified" cannot.
+
+## Approval gate
+
+The plugin also installs a `tools/pre-execute` gate that screens tool calls before
+they run, using the harm scale (`harmless` / `risky` / `destructive`). You do not
+invoke it; it acts on its own:
+
+- read-only commands on the configured allow-list pass without a model call
+- anything else is judged, and a `risky` or `destructive` verdict stops the call
+  for a human
+- an unreachable decision service routes to a human rather than letting the call
+  through
+
+If a call you expected to run comes back blocked or awaiting approval, that is the
+gate, not a tool failure. The reason string names the verdict.
