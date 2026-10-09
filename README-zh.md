@@ -6,10 +6,10 @@
 
 由 [Phocinae-Largha-150M-v1](https://huggingface.co/Phocinae/Phocinae-Largha-150M-v1) 服务器支撑的 `phocinae_ask` / `phocinae_gate` 工具——是非判断、单选题和 2-10 分打分，每次只需一次前向传播，全程在你自己的机器上——外加一道故障关闭的审批门，在工具调用执行之前先做审查。
 
-这是 **0.2.3**——在 0.2.2 修复版基础上，把公布数字刷新到模型的 v1.1 数值（无代码变更）。0.1.2 版插件在 DSH 0.2.x 上完全无法激活：harness 只记了一条警告，入口就死了。*Fixed in 0.2.2* 一节之后的所有内容，讲的就是改了什么以及为什么改。
+这是 **0.2.4**——在 0.2.3 的 v1.1 数字刷新基础上，为公布数值加上版本锚（无代码变更）。0.1.2 版插件在 DSH 0.2.x 上完全无法激活：harness 只记了一条警告，入口就死了。*Fixed in 0.2.2* 一节之后的所有内容，讲的就是改了什么以及为什么改。
 
 ```sh
-dsh plugin --profile <name> add dsh-phocinae@0.2.3
+dsh plugin --profile <name> add dsh-phocinae@0.2.4
 ```
 
 需要 Node `^22.19` 或 `>=24`，以及一个可访问的决策服务（见 [运行决策服务](#running-the-decision-service)）。
@@ -21,7 +21,7 @@ dsh plugin --profile <name> add dsh-phocinae@0.2.3
 | 步骤 | 作用 |
 |---|---|
 | `npm i dsh-phocinae` | 把包装进**当前目录的** `node_modules`。适合阅读代码或直接导入 guard。它**不会**触及任何 DSH profile。 |
-| `dsh plugin --profile <name> add dsh-phocinae@0.2.3` | 把它加进**那个 profile 的** `package.json`（`dependencies` **和** `dsh.profile.bundles`），并用 pnpm 安装到那里。这才是让宿主挂载它的原因。 |
+| `dsh plugin --profile <name> add dsh-phocinae@0.2.4` | 把它加进**那个 profile 的** `package.json`（`dependencies` **和** `dsh.profile.bundles`），并用 pnpm 安装到那里。这才是让宿主挂载它的原因。 |
 
 在本机上用一个一次性的 `DSH_HOME` 实测：
 
@@ -55,7 +55,7 @@ minimumReleaseAgeExclude:
 **版本应当被点名**，既能立刻拿到修复版，也让安装可复现：
 
 ```sh
-dsh plugin --profile <name> add dsh-phocinae@0.2.3
+dsh plugin --profile <name> add dsh-phocinae@0.2.4
 ```
 
 如果裸添加真的把你带到了 0.1.2，用 `dsh <profile> --dump-config` 可以看出挂载的是哪个版本，
@@ -64,7 +64,7 @@ dsh plugin --profile <name> add dsh-phocinae@0.2.3
 Git 和本地 checkout 的用法相同，而且天然就锁定了版本：
 
 ```sh
-dsh plugin --profile <name> add github:Phocinae/dsh-phocinae#v0.2.3
+dsh plugin --profile <name> add github:Phocinae/dsh-phocinae#v0.2.4
 dsh plugin --profile <name> add /path/to/a/local/checkout
 ```
 
@@ -193,7 +193,7 @@ zh 数字为机译用例；训练混料含机译中文 ≈2,400 行＋原生中�
 |---|---|---|
 | `noul` — "这条命令应该被拦截吗？"（0.1.2 的默认值） | **0.00** | — |
 | `tri-state` — allow / ask / deny | **0.74** | 1 |
-| **`harm` — harmless / risky / destructive（0.2.3 默认值）** | **0.97** | **0** |
+| **`harm` — harmless / risky / destructive（0.2.4 默认值）** | **0.97** | **0** |
 
 沿用的布尔问题不只是弱，而是完全反了：它放行了**全部 31 条破坏性命令**，其中多数置信度在 0.54 到 0.80 之间。问"这是否安全？"更糟——31 条中有 27 条被放行，置信度最高达 0.87。危害量表是实测中唯一既能拦住几乎所有破坏性命令、又从不有把握地放行破坏性命令的提问形式。
 
@@ -203,7 +203,7 @@ zh 数字为机译用例；训练混料含机译中文 ≈2,400 行＋原生中�
 
 模型的置信度不足以把常规命令和危险命令区分开，无法充当通用过滤器。它的 `harmless` 判定大多落在 0.27–0.54 区间，所以如果让审批门去问 `git status`，它会把 `git status` 转给人工。
 
-这就是 `0.2.3` 附带一份**自动放行列表**的原因：不含 shell 运算符的只读命令以及构建/测试命令根本不会到达模型。审批门的职责是拦截，而不是批准常规操作：
+这就是 `0.2.4` 附带一份**自动放行列表**的原因：不含 shell 运算符的只读命令以及构建/测试命令根本不会到达模型。审批门的职责是拦截，而不是批准常规操作：
 
 - 名称在列表上且不含运算符 → 本地放行，不发请求，没有延迟
 - 任何包含 `;&|><`$(){}\[\]` 等字符的内容 → 绕过该列表，由模型决定

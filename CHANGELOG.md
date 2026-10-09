@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.4] — 2026-10-09
+
+### Changed
+
+- The five READMEs carry **version anchors**: v1.0 / v1.0 corrected / v1.1, so
+  the generation of the published figures to cite is explicit, and the
+  pre-correction reading (0.7948 / −82% / 18%) is marked deprecated upstream —
+  do not cite. The v1.1 numbers themselves are unchanged from 0.2.3.
+- `bench/compare-upstream.mjs` gained a `rowsV11` group (the v1.1 figures against
+  what this repository already records, with the GPU-latency and flip400 claims
+  left UNTESTED); `fetchedAt` is now documented as a hard-coded snapshot, and
+  `bench/results/upstream-comparison.json` carries a timeliness field. The 0.2.1
+  report keeps its historical numbers and is dated as a snapshot. Documentation
+  only — no code changes.
+
 ## [0.2.3] — 2026-10-09
 
 ### Changed
