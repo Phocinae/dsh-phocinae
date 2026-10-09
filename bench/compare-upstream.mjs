@@ -1,12 +1,21 @@
 /**
  * Diff the upstream Phocinae claims against what this machine measured.
  *
- * The upstream README was rewritten on 2026-10-08 (repo pushed 05:22:52Z). This
- * script holds the updated claims as data, pairs each with the measurement that
- * tests it, and prints where they agree and where they do not.
+ * TIMELINESS — read this before quoting anything the script prints:
+ *   - This is a HISTORICAL comparison, not a live check. The `rows` group holds
+ *     the upstream README as fetched 2026-10-08T05:22Z (its v1.0-corrected
+ *     revision) against measurements saved under bench/results/ from the same
+ *     day; the `rowsV11` group records the 2026-10-09 v1.1 refresh. Nothing is
+ *     re-fetched and nothing is re-measured — the script only re-reads evidence
+ *     that is already in this repository.
+ *   - For the figures to cite today, see the version anchors in the five READMEs
+ *     (v1.0 / v1.0 corrected / v1.1) together with the `rowsV11` group below.
+ *   - Rows whose verdict starts with UNTESTED were never measured here. They stay
+ *     UNTESTED until someone actually runs the measurement; do not cite them as
+ *     passing.
  *
- * The measurements come from the raw files under bench/results/, so this is a
- * re-reading of collected evidence, not a re-run.
+ * History: the upstream README was rewritten on 2026-10-08 (repo pushed
+ * 05:22:52Z) and refreshed again to v1.1 on 2026-10-09.
  *
  * Usage: node bench/compare-upstream.mjs
  */
@@ -165,6 +174,67 @@ const rows = [
   },
 ]
 
+/**
+ * rowsV11 — the 2026-10-09 v1.1 refresh, held to the same rules.
+ *
+ * Same shape as `rows`: an upstream claim, what this repository records, a
+ * verdict. A `measured` string may only quote what the repository itself
+ * already records — the 0.2.3 errata (the READMEs' measured columns and the
+ * "cold re-run" result) — because the v1.1 refresh added no raw files under
+ * bench/results/. Anything without such a record is UNTESTED. No value here
+ * was re-measured for this group, and none is invented.
+ */
+const rowsV11 = [
+  {
+    claim: 'typed-decisions en accuracy (v1.1)',
+    upstream: '0.906',
+    measured: '0.9055 — the v1.1 cold re-run as recorded in the 0.2.3 errata (the "measured (en)" column of the five READMEs); no raw per-decision file for it sits under bench/results/',
+    verdict: 'AGREES, as recorded (within the stated fp16/fp32 noise)',
+  },
+  {
+    claim: 'typed-decisions zh accuracy (v1.1)',
+    upstream: '0.848',
+    measured: '0.848 — the v1.1 cold re-run as recorded in the 0.2.3 errata (machine-translated cases; in-mix/fitted evaluation, not cross-lingual transfer)',
+    verdict: 'AGREES, as recorded',
+  },
+  {
+    claim: 'escalation rate at tau=0.6 (v1.1)',
+    upstream: '45.0%',
+    measured: '45.0% — the v1.1 cold re-run as recorded in the README tau table; the README states an independent replication returns the same 45.0%',
+    verdict: 'AGREES, as recorded (decision granularity)',
+  },
+  {
+    claim: 'LLM-call reduction at tau=0.6 (v1.1)',
+    upstream: '−55.0%',
+    measured: '45.0% escalated, so 55.0% of decision traffic stays local at tau=0.6, per the recorded tau table; the structural case-level cost disclosed in the earlier group still applies',
+    verdict: 'AGREES at the published granularity, as recorded',
+  },
+  {
+    claim: 'kept-subset accuracy at tau=0.6 (v1.1)',
+    upstream: '0.9936',
+    measured: '0.9936 — the v1.1 cold re-run as recorded in the README measured column and tau table',
+    verdict: 'AGREES, as recorded',
+  },
+  {
+    claim: 'the 79.6% headline at tau≈0.50 (v1.1)',
+    upstream: '−79.6% at tau=0.5 (20.4% escalated)',
+    measured: '20.4% escalated, so 79.6% kept local at tau=0.50, kept-subset accuracy 0.9523 — as recorded in the README tau table',
+    verdict: 'AGREES, as recorded (the headline number belongs to tau≈0.50, not the frozen tau=0.6)',
+  },
+  {
+    claim: 'GPU fp16 p50 latency (v1.1)',
+    upstream: '21.0 ms on an RTX 5090',
+    measured: 'not measured in this repository — no CUDA device in this environment, and the v1.1 refresh added no latency run; the only latency files under bench/results/ are from the 0.2.1 era',
+    verdict: 'UNTESTED',
+  },
+  {
+    claim: 'option-order flip robustness (v1.1)',
+    upstream: 'flip400 0.0217',
+    measured: 'not measured in this repository — flip400 is not run here',
+    verdict: 'UNTESTED (the earlier audit\'s 0.44 flip rate used a different protocol — reversed noul option order — not flip400)',
+  },
+]
+
 console.log('upstream claims (README fetched 2026-10-08T05:22Z) vs measurement\n')
 let agrees = 0
 let differs = 0
@@ -183,6 +253,24 @@ for (const row of rows) {
 }
 console.log(`${agrees} agree, ${differs} need attention, ${untested} untested\n`)
 
+console.log('v1.1 claims (the 2026-10-09 refresh, as recorded in this repository)\n')
+let agreesV11 = 0
+let differsV11 = 0
+let untestedV11 = 0
+for (const row of rowsV11) {
+  const marker = row.verdict.startsWith('AGREES') ? '='
+    : (row.verdict.startsWith('UNTESTED') ? '?' : '!')
+  if (marker === '=') agreesV11 += 1
+  else if (marker === '?') untestedV11 += 1
+  else differsV11 += 1
+  console.log(`${marker} ${row.claim}`)
+  console.log(`    upstream : ${row.upstream}`)
+  console.log(`    recorded : ${row.measured}`)
+  console.log(`    verdict  : ${row.verdict}`)
+  console.log('')
+}
+console.log(`${agreesV11} agree, ${differsV11} need attention, ${untestedV11} untested\n`)
+
 // ------------------------------------------------------------------ what changed
 console.log('what the upstream rewrite changed, in its own words')
 console.log('  before : "Cuts LLM calls by 82% with a τ=0.6 confidence gate"')
@@ -198,10 +286,17 @@ console.log('0.886 is "accuracy on the decisions the gate kept local". Both are 
 console.log('answer different questions, and only the second is comparable across models.')
 
 const outPath = path.join(REPO, 'bench/results/upstream-comparison.json')
+// WARNING: `fetchedAt` below is a HARD-CODED snapshot — the moment the upstream
+// README was fetched (2026-10-08T05:22Z), never the time this script runs. Every
+// run re-writes the same value, so it must not be read as the file's recency. The
+// v1.1 refresh (2026-10-09) is recorded in `rowsV11` because this script neither
+// re-fetches nor re-measures; UNTESTED stays UNTESTED.
 fs.writeFileSync(outPath, `${JSON.stringify({
   fetchedAt: '2026-10-08T05:22Z',
   upstreamRepoPushedAt: '2026-10-08T05:22:52Z',
   pluginRepoPushedAt: '2026-10-08T02:23:13Z',
+  timeliness: 'Historical comparison — do not read as current. fetchedAt is a hard-coded snapshot of the 2026-10-08 upstream fetch, not the run time of this script; re-running rewrites the same value. The `rows` group compares the 2026-10-08 upstream revision against 0.2.1-era measurements; `rowsV11` records the 2026-10-09 v1.1 figures from this repository\'s own records (the 0.2.3 errata), not re-measured. UNTESTED rows were never measured and must stay UNTESTED when cited. The version anchors to cite live in the five READMEs.',
   rows, agrees, differs, untested,
+  rowsV11, agreesV11, differsV11, untestedV11,
 }, null, 1)}\n`, 'utf8')
 console.log(`\nwrote ${outPath}`)

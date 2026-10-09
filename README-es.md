@@ -164,6 +164,8 @@ La publicación del modelo documenta una puerta E1: escalar una decisión a un m
 
 Las cifras medidas se produjeron en una sola máquina (CPU, fp32) contra los pesos publicados, con los scripts de `bench/`; vuelve a ejecutarlos en tu propio hardware antes de confiar en ellos. Las cifras publicadas proceden de los propios documentos de la publicación del modelo.
 
+**Anclas de versión.** v1.0 — primeras cifras publicadas. v1.0 corregida — cifras E1 corregidas (kept-subset 0.886, −54.4% de llamadas al LLM, 45.7% de escalado). v1.1 (2026-10-09) — versión de referencia (0.906 / 0.848, 45.0% de escalado / −55.0% de llamadas, kept-subset 0.9936). La lectura anterior a la corrección (0.7948 / −82% / 18%) está obsoleta en el upstream — no citar.
+
 ### Calidad de las decisiones — el modelo es honesto
 
 `datasets/typed_test/test_typed_400.jsonl`, 400 casos × 5 preguntas = 2000 decisiones, evaluadas decisión a decisión contra `gold.label`:

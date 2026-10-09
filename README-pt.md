@@ -163,6 +163,8 @@ A versão do modelo documenta um portão E1: escalonar uma decisão para um mode
 
 Os números medidos foram produzidos em uma única máquina (CPU, fp32), com os pesos publicados e os scripts em `bench/`; execute-os novamente no seu próprio hardware antes de confiar neles. Os números publicados vêm dos próprios documentos da versão do modelo.
 
+**Âncoras de versão.** v1.0 — primeiros números publicados. v1.0 corrigida — números E1 corrigidos (kept-subset 0.886, −54.4% de chamadas ao LLM, 45.7% de escalonamento). v1.1 (2026-10-09) — versão de referência (0.906 / 0.848, 45.0% de escalonamento / −55.0% de chamadas, kept-subset 0.9936). A leitura anterior à correção (0.7948 / −82% / 18%) está obsoleta no upstream — não citar.
+
 ### Qualidade das decisões — o modelo é honesto
 
 `datasets/typed_test/test_typed_400.jsonl`, 400 casos × 5 perguntas = 2000 decisões, julgadas decisão a decisão contra `gold.label`:

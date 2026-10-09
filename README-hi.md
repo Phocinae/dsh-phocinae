@@ -163,6 +163,8 @@ Model release में एक E1 gate का ज़िक्र है: जब 
 
 मापे गए आँकड़े एक ही मशीन (CPU, fp32) पर, release किए गए weights के साथ, `bench/` की scripts से बनाए गए हैं; इन पर भरोसा करने से पहले इन्हें अपने hardware पर दोबारा चलाएँ। Published figures model release के अपने documents से लिए गए हैं।
 
+**Version anchors.** v1.0 — पहले प्रकाशित figures। v1.0 corrected — E1 numbers सुधारे गए (kept-subset 0.886, −54.4% LLM calls, 45.7% escalate)। v1.1 (2026-10-09) — release of record (0.906 / 0.848, 45.0% escalated / −55.0% calls, kept-subset 0.9936)। pre-correction reading (0.7948 / −82% / 18%) upstream में deprecated है — इसे cite न करें।
+
 ### निर्णय की गुणवत्ता — model ईमानदार है
 
 `datasets/typed_test/test_typed_400.jsonl`, 400 cases × 5 questions = 2000 decisions, हर decision को `gold.label` के सामने परखा गया:

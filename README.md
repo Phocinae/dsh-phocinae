@@ -163,6 +163,8 @@ The model release documents an E1 gate: escalate a decision to a larger model wh
 
 The measured figures were produced on one machine (CPU, fp32) against the released weights, with the scripts in `bench/`; re-run them on your own hardware before relying on them. The published figures come from the model release's own documents.
 
+**Version anchors.** v1.0 — first published figures. v1.0 corrected — E1 numbers corrected (kept-subset 0.886, −54.4% LLM calls, 45.7% escalate). v1.1 (2026-10-09) — release of record (0.906 / 0.848, 45.0% escalated / −55.0% calls, kept-subset 0.9936). The pre-correction reading (0.7948 / −82% / 18%) is deprecated upstream — do not cite.
+
 ### Decision quality — the model is honest
 
 `datasets/typed_test/test_typed_400.jsonl`, 400 cases × 5 questions = 2000 decisions, judged per decision against `gold.label`:

@@ -2,6 +2,7 @@
  "fetchedAt": "2026-10-08T05:22Z",
  "upstreamRepoPushedAt": "2026-10-08T05:22:52Z",
  "pluginRepoPushedAt": "2026-10-08T02:23:13Z",
+ "timeliness": "Historical comparison — do not read as current. fetchedAt is a hard-coded snapshot of the 2026-10-08 upstream fetch, not the run time of this script; re-running rewrites the same value. The `rows` group compares the 2026-10-08 upstream revision against 0.2.1-era measurements; `rowsV11` records the 2026-10-09 v1.1 figures from this repository's own records (the 0.2.3 errata), not re-measured. UNTESTED rows were never measured and must stay UNTESTED when cited. The version anchors to cite live in the five READMEs.",
  "rows": [
   {
    "claim": "parameters 144.3M",
@@ -90,5 +91,58 @@
  ],
  "agrees": 8,
  "differs": 3,
- "untested": 3
+ "untested": 3,
+ "rowsV11": [
+  {
+   "claim": "typed-decisions en accuracy (v1.1)",
+   "upstream": "0.906",
+   "measured": "0.9055 — the v1.1 cold re-run as recorded in the 0.2.3 errata (the \"measured (en)\" column of the five READMEs); no raw per-decision file for it sits under bench/results/",
+   "verdict": "AGREES, as recorded (within the stated fp16/fp32 noise)"
+  },
+  {
+   "claim": "typed-decisions zh accuracy (v1.1)",
+   "upstream": "0.848",
+   "measured": "0.848 — the v1.1 cold re-run as recorded in the 0.2.3 errata (machine-translated cases; in-mix/fitted evaluation, not cross-lingual transfer)",
+   "verdict": "AGREES, as recorded"
+  },
+  {
+   "claim": "escalation rate at tau=0.6 (v1.1)",
+   "upstream": "45.0%",
+   "measured": "45.0% — the v1.1 cold re-run as recorded in the README tau table; the README states an independent replication returns the same 45.0%",
+   "verdict": "AGREES, as recorded (decision granularity)"
+  },
+  {
+   "claim": "LLM-call reduction at tau=0.6 (v1.1)",
+   "upstream": "−55.0%",
+   "measured": "45.0% escalated, so 55.0% of decision traffic stays local at tau=0.6, per the recorded tau table; the structural case-level cost disclosed in the earlier group still applies",
+   "verdict": "AGREES at the published granularity, as recorded"
+  },
+  {
+   "claim": "kept-subset accuracy at tau=0.6 (v1.1)",
+   "upstream": "0.9936",
+   "measured": "0.9936 — the v1.1 cold re-run as recorded in the README measured column and tau table",
+   "verdict": "AGREES, as recorded"
+  },
+  {
+   "claim": "the 79.6% headline at tau≈0.50 (v1.1)",
+   "upstream": "−79.6% at tau=0.5 (20.4% escalated)",
+   "measured": "20.4% escalated, so 79.6% kept local at tau=0.50, kept-subset accuracy 0.9523 — as recorded in the README tau table",
+   "verdict": "AGREES, as recorded (the headline number belongs to tau≈0.50, not the frozen tau=0.6)"
+  },
+  {
+   "claim": "GPU fp16 p50 latency (v1.1)",
+   "upstream": "21.0 ms on an RTX 5090",
+   "measured": "not measured in this repository — no CUDA device in this environment, and the v1.1 refresh added no latency run; the only latency files under bench/results/ are from the 0.2.1 era",
+   "verdict": "UNTESTED"
+  },
+  {
+   "claim": "option-order flip robustness (v1.1)",
+   "upstream": "flip400 0.0217",
+   "measured": "not measured in this repository — flip400 is not run here",
+   "verdict": "UNTESTED (the earlier audit's 0.44 flip rate used a different protocol — reversed noul option order — not flip400)"
+  }
+ ],
+ "agreesV11": 6,
+ "differsV11": 0,
+ "untestedV11": 2
 }
