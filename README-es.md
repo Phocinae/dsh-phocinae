@@ -162,7 +162,7 @@ La publicación del modelo documenta una puerta E1: escalar una decisión a un m
 
 ## Comportamiento medido
 
-Todos los números de esta sección se produjeron en una sola máquina (CPU, fp32, Node 24) contra los pesos publicados, con los scripts de `bench/`; vuelve a ejecutarlos en tu propio hardware antes de confiar en ellos. Las cifras publicadas proceden de los propios documentos de la publicación del modelo.
+Las cifras medidas se produjeron en una sola máquina (CPU, fp32) contra los pesos publicados, con los scripts de `bench/`; vuelve a ejecutarlos en tu propio hardware antes de confiar en ellos. Las cifras publicadas proceden de los propios documentos de la publicación del modelo.
 
 ### Calidad de las decisiones — el modelo es honesto
 
@@ -170,20 +170,22 @@ Todos los números de esta sección se produjeron en una sola máquina (CPU, fp3
 
 | métrica | publicado (en) | medido (en) | publicado (zh) | medido (zh) |
 |---|---|---|---|---|
-| exactitud local | 0.797 | **0.7825** | 0.789 | **0.7820** |
-| tasa de escalado @ τ=0.6 | 18% | **45.65%** | 18% | **43.00%** |
-| exactitud en las decisiones conservadas | — | 0.8859 | — | 0.9035 |
+| exactitud local | 0.906 | **0.9055** | 0.848 | **0.848** |
+| tasa de escalado @ τ=0.6 | 45.0% | **45.0%** | — | **—** |
+| exactitud en las decisiones conservadas | — | 0.9936 | — | — |
 
-La exactitud se reproduce dentro del propio ruido fp16/fp32 que declara la publicación. La tasa de escalado no, y los documentos publicados se contradicen entre sí al respecto: el titular *"82% menos llamadas al LLM"* es lo que se obtiene con **τ≈0.50**, mientras que la puerta E1 congelada que también documentan es **τ=0.6**:
+Las cifras zh son casos traducidos automáticamente; la mezcla de entrenamiento incluye chino traducido automáticamente (≈2,400 filas) más chino nativo (≈1,400 filas) — una evaluación in-mix (fitted), no transferencia entre idiomas.
+
+La exactitud se reproduce dentro del propio ruido fp16/fp32 que declara la publicación, y la tasa de escalado también (una replicación independiente devuelve el mismo 45.0%). El titular *"79.6% menos llamadas al LLM"* corresponde a **τ≈0.50**, mientras que la puerta E1 congelada es **τ=0.6** (τ barrido sobre el conjunto de evaluación — hay que volver a barrerlo por dominio):
 
 | τ | escaladas | llamadas al LLM evitadas | exactitud en las decisiones que se quedan en local |
 |---|---|---|---|
-| 0.50 | 17.15% | **82.8%** | 0.8214 |
-| **0.60** | **45.65%** | **54.4%** | 0.8859 |
-| 0.70 | 67.15% | 32.9% | 0.9300 |
-| 0.80 | 81.70% | 18.3% | 0.9645 |
+| 0.50 | 20.4% | **79.6%** | 0.9523 |
+| **0.60** | **45.0%** | **55.0%** | 0.9936 |
+| 0.70 | 65.0% | 35.0% | 0.9986 |
+| 0.80 | 77.0% | 23.0% | 1.000 |
 
-**"82% de ahorro" y "τ=0.6" no pueden ser ciertos a la vez.** En el umbral que la publicación del modelo llama congelado, la reducción es del 54%. Sigue siendo un ahorro real, y el orden de confianza es genuinamente útil — la exactitud de lo que se queda en local sube de 0.78 a 0.96 a medida que sube el listón —, pero la cifra del titular pertenece a otro umbral.
+**"79.6% de ahorro" y "τ=0.6" no pueden ser ciertos a la vez.** En el umbral que la publicación del modelo llama congelado, la reducción es del 55.0%. Sigue siendo un ahorro real, y el orden de confianza es genuinamente útil — la exactitud de lo que se queda en local sube de 0.91 a 1.00 a medida que sube el listón —, pero la cifra del titular pertenece a otro umbral.
 
 ### Calidad de la puerta — y por qué cambió la pregunta por defecto
 
@@ -218,9 +220,9 @@ Una entrada que contenga un operador de shell se rechaza en el momento de la car
 | afirmación | veredicto |
 |---|---|
 | "modelo de decisión bilingüe de 144.3M, una pasada forward, local" | **verdadero** |
-| "decisiones tipadas en 0.797 / zh 0.789" | **se reproduce** (0.7825 / 0.7820) |
-| "reduce las llamadas al LLM un 82% con una puerta de confianza τ=0.6" | **falso tal como está escrito** — el 82% corresponde a τ≈0.50; con τ=0.6 es el 54% |
-| "el escalado mejora la exactitud combinada hasta 0.7948" | **consistente** — el escalado solo sustituye respuestas locales incorrectas |
+| "decisiones tipadas en 0.906 / zh 0.848" | **se reproduce** (0.9055 / 0.848) |
+| "reduce las llamadas al LLM un 79.6% con una puerta de confianza τ=0.6" | **falso tal como está escrito** — el 79.6% corresponde a τ≈0.50; con τ=0.6 es el 55.0% |
+| "el escalado mejora la exactitud combinada hasta 0.8737" | **consistente** — el escalado solo sustituye respuestas locales incorrectas |
 | "el complemento proporciona esta puerta" | **era falso en la 0.1.2** (recall 0.00, y nunca llegó a cargarse) |
 
 ---

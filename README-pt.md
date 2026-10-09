@@ -161,7 +161,7 @@ A versão do modelo documenta um portão E1: escalonar uma decisão para um mode
 
 ## Comportamento medido
 
-Todo número aqui foi produzido em uma única máquina (CPU, fp32, Node 24), com os pesos publicados e os scripts em `bench/`; execute-os novamente no seu próprio hardware antes de confiar neles. Os números publicados vêm dos próprios documentos da versão do modelo.
+Os números medidos foram produzidos em uma única máquina (CPU, fp32), com os pesos publicados e os scripts em `bench/`; execute-os novamente no seu próprio hardware antes de confiar neles. Os números publicados vêm dos próprios documentos da versão do modelo.
 
 ### Qualidade das decisões — o modelo é honesto
 
@@ -169,20 +169,22 @@ Todo número aqui foi produzido em uma única máquina (CPU, fp32, Node 24), com
 
 | métrica | publicado (en) | medido (en) | publicado (zh) | medido (zh) |
 |---|---|---|---|---|
-| acurácia local | 0.797 | **0.7825** | 0.789 | **0.7820** |
-| taxa de escalonamento @ τ=0.6 | 18% | **45.65%** | 18% | **43.00%** |
-| acurácia nas decisões mantidas | — | 0.8859 | — | 0.9035 |
+| acurácia local | 0.906 | **0.9055** | 0.848 | **0.848** |
+| taxa de escalonamento @ τ=0.6 | 45.0% | **45.0%** | — | **—** |
+| acurácia nas decisões mantidas | — | 0.9936 | — | — |
 
-A acurácia se reproduz dentro do próprio ruído fp16/fp32 declarado pela versão. A taxa de escalonamento não, e os documentos publicados divergem entre si a esse respeito: a manchete *"82% fewer LLM calls"* é o que se obtém em **τ≈0.50**, enquanto o portão E1 congelado que eles também documentam é **τ=0.6**:
+Os números zh são casos traduzidos automaticamente; a mistura de treino inclui chinês traduzido automaticamente (≈2,400 linhas) mais chinês nativo (≈1,400 linhas) — uma avaliação in-mix (fitted), não transferência entre idiomas.
+
+A acurácia se reproduz dentro do próprio ruído fp16/fp32 declarado pela versão, e a taxa de escalonamento também (uma replicação independente retorna os mesmos 45.0%). A manchete *"79.6% fewer LLM calls"* corresponde a **τ≈0.50**, enquanto o portão E1 congelado é **τ=0.6** (τ varrido no conjunto de avaliação — é preciso varrê-lo de novo por domínio):
 
 | τ | escalonadas | chamadas de LLM evitadas | acurácia nas decisões mantidas locais |
 |---|---|---|---|
-| 0.50 | 17.15% | **82.8%** | 0.8214 |
-| **0.60** | **45.65%** | **54.4%** | 0.8859 |
-| 0.70 | 67.15% | 32.9% | 0.9300 |
-| 0.80 | 81.70% | 18.3% | 0.9645 |
+| 0.50 | 20.4% | **79.6%** | 0.9523 |
+| **0.60** | **45.0%** | **55.0%** | 0.9936 |
+| 0.70 | 65.0% | 35.0% | 0.9986 |
+| 0.80 | 77.0% | 23.0% | 1.000 |
 
-**"82% economizados" e "τ=0.6" não podem ser verdadeiros ao mesmo tempo.** No limiar que a versão do modelo chama de congelado, a redução é de 54%. Isso ainda é uma economia real, e a ordenação por confiança é genuinamente útil — a acurácia do que permanece local sobe de 0.78 para 0.96 à medida que a barra sobe —, mas o número da manchete pertence a um limiar diferente.
+**"79.6% economizados" e "τ=0.6" não podem ser verdadeiros ao mesmo tempo.** No limiar que a versão do modelo chama de congelado, a redução é de 55.0%. Isso ainda é uma economia real, e a ordenação por confiança é genuinamente útil — a acurácia do que permanece local sobe de 0.91 para 1.00 à medida que a barra sobe —, mas o número da manchete pertence a um limiar diferente.
 
 ### Qualidade do portão — e por que a pergunta padrão mudou
 
@@ -217,9 +219,9 @@ Uma entrada que contenha um operador de shell é recusada no momento do carregam
 | alegação | veredito |
 |---|---|
 | "modelo bilíngue de decisão de 144.3M, um forward pass, local" | **verdadeira** |
-| "decisões tipadas en 0.797 / zh 0.789" | **reproduz** (0.7825 / 0.7820) |
-| "reduz as chamadas de LLM em 82% com um portão de confiança em τ=0.6" | **falsa como escrita** — 82% é τ≈0.50; em τ=0.6 é 54% |
-| "o escalonamento melhora a acurácia combinada para 0.7948" | **consistente** — o escalonamento só substitui respostas locais erradas |
+| "decisões tipadas en 0.906 / zh 0.848" | **reproduz** (0.9055 / 0.848) |
+| "reduz as chamadas de LLM em 79.6% com um portão de confiança em τ=0.6" | **falsa como escrita** — 79.6% é τ≈0.50; em τ=0.6 é 55.0% |
+| "o escalonamento melhora a acurácia combinada para 0.8737" | **consistente** — o escalonamento só substitui respostas locais erradas |
 | "o complemento fornece este portão" | **era falsa na 0.1.2** (recall 0.00, e ele nunca carregava) |
 
 ---

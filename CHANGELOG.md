@@ -97,9 +97,9 @@ so a regression is a failing test rather than a silent behaviour change.
 
 ### Documentation
 
-- The README states the measured numbers next to the published ones, including where
-  they disagree: the model's "82% fewer LLM calls" belongs to τ≈0.50, while the frozen
-  E1 gate is τ=0.6, where the measured reduction is 54.4% (en) / 57.0% (zh).
+- The README states the measured numbers next to the published ones: the model's
+  "79.6% fewer LLM calls" saving belongs to τ≈0.50, while the frozen E1 gate is
+  τ=0.6, where the measured reduction is 55.0%.
 - `SECURITY.md` states plainly that the gate is a screening aid and not a sandbox.
 
 ## [0.1.2] — 2026-10-08
