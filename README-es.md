@@ -6,10 +6,10 @@
 
 Herramientas `phocinae_ask` / `phocinae_gate` respaldadas por un servidor [Phocinae-Largha-150M-v1](https://huggingface.co/Phocinae/Phocinae-Largha-150M-v1) — juicios de sí/no, elecciones de una sola opción y puntuaciones de 2 a 10, una pasada forward cada una, en tu propia máquina — más una puerta de aprobación que falla cerrada y examina las llamadas a herramientas antes de que se ejecuten.
 
-Esta es la **0.2.2**, una versión de reparación. El complemento 0.1.2 no se activaba en absoluto en DSH 0.2.x: el harness registraba un solo aviso y la entrada moría. Todo lo que aparece a continuación de la sección *Corregido en 0.2.2* es lo que cambió y por qué.
+Esta es la **0.2.3** — la versión de reparación 0.2.2 más una actualización de las cifras publicadas a los valores v1.1 del modelo (sin cambios de código). El complemento 0.1.2 no se activaba en absoluto en DSH 0.2.x: el harness registraba un solo aviso y la entrada moría. Todo lo que aparece a continuación de la sección *Corregido en 0.2.2* es lo que cambió y por qué.
 
 ```sh
-dsh plugin --profile <name> add dsh-phocinae@0.2.2
+dsh plugin --profile <name> add dsh-phocinae@0.2.3
 ```
 
 Requiere Node `^22.19` o `>=24`, y un servicio de decisión accesible (véase [Ejecutar el servicio de decisión](#running-the-decision-service)).
@@ -21,7 +21,7 @@ Tienen que ocurrir dos cosas distintas, y solo la segunda monta el complemento:
 | paso | qué hace |
 |---|---|
 | `npm i dsh-phocinae` | Coloca el paquete en el `node_modules` **del directorio actual**. Útil para leer el código o importar el guard directamente. **No** llega a ningún perfil de DSH. |
-| `dsh plugin --profile <name> add dsh-phocinae@0.2.2` | Lo añade al `package.json` **de ese perfil** (`dependencies` **y** `dsh.profile.bundles`) y lo instala allí con pnpm. Esto es lo que hace que el host lo monte. |
+| `dsh plugin --profile <name> add dsh-phocinae@0.2.3` | Lo añade al `package.json` **de ese perfil** (`dependencies` **y** `dsh.profile.bundles`) y lo instala allí con pnpm. Esto es lo que hace que el host lo monte. |
 
 Medido en esta máquina, con un `DSH_HOME` desechable:
 
@@ -58,7 +58,7 @@ ataque a la cadena de suministro. Solo significa que **hay que nombrar la versi�
 la compilación corregida de inmediato como para que la instalación sea reproducible:
 
 ```sh
-dsh plugin --profile <name> add dsh-phocinae@0.2.2
+dsh plugin --profile <name> add dsh-phocinae@0.2.3
 ```
 
 Si un add sin versión te deja en 0.1.2, `dsh <profile> --dump-config` muestra qué versión está montada,
@@ -68,7 +68,7 @@ Las instalaciones desde Git y desde un checkout local funcionan igual, y fijan l
 construcción:
 
 ```sh
-dsh plugin --profile <name> add github:Phocinae/dsh-phocinae#v0.2.2
+dsh plugin --profile <name> add github:Phocinae/dsh-phocinae#v0.2.3
 dsh plugin --profile <name> add /path/to/a/local/checkout
 ```
 
@@ -195,7 +195,7 @@ La exactitud se reproduce dentro del propio ruido fp16/fp32 que declara la publi
 |---|---|---|
 | `noul` — "¿debería bloquearse esto?" (valor por defecto de 0.1.2) | **0.00** | — |
 | `tri-state` — allow / ask / deny | **0.74** | 1 |
-| **`harm` — harmless / risky / destructive (valor por defecto de 0.2.2)** | **0.97** | **0** |
+| **`harm` — harmless / risky / destructive (valor por defecto de 0.2.3)** | **0.97** | **0** |
 
 La pregunta booleana heredada no es solo débil, está invertida: dejó pasar **los 31 comandos destructivos**, la mayoría con una confianza de entre 0.54 y 0.80. Preguntar "¿esto es seguro?" es aún peor — 27 de 31 pasaron con una confianza de hasta 0.87. La escala de daño es la única formulación medida que atrapó casi todo y que nunca dejó pasar con confianza un comando destructivo.
 
@@ -205,7 +205,7 @@ Su único fallo, `vssadmin delete shadows /all /quiet`, lo atrapa la regla de op
 
 La confianza del modelo no separa los comandos rutinarios de los peligrosos lo bastante bien como para ser un filtro de propósito general. Sus veredictos `harmless` se sitúan en su mayoría en 0.27–0.54, así que una puerta que le preguntara por `git status` mandaría `git status` a una persona.
 
-Por eso la `0.2.2` incluye una **lista de auto-permiso**: los comandos de solo lectura y de compilación/pruebas sin operadores de shell no llegan siquiera al modelo. El trabajo de la puerta es detener cosas, no aprobar lo rutinario:
+Por eso la `0.2.3` incluye una **lista de auto-permiso**: los comandos de solo lectura y de compilación/pruebas sin operadores de shell no llegan siquiera al modelo. El trabajo de la puerta es detener cosas, no aprobar lo rutinario:
 
 - nombres en la lista, sin operador → pasan en local, sin petición, sin latencia
 - cualquier cosa que contenga `;&|><`$(){}\[\]` etc. → se omite la lista y decide el modelo

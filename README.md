@@ -6,10 +6,10 @@
 
 `phocinae_ask` / `phocinae_gate` tools backed by a [Phocinae-Largha-150M-v1](https://huggingface.co/Phocinae/Phocinae-Largha-150M-v1) server — yes/no judgements, single-choice picks and 2-10 scores, one forward pass each, on your own machine — plus a fail-closed approval gate that screens tool calls before they run.
 
-This is **0.2.2**, a repair release. The 0.1.2 plugin did not activate at all on DSH 0.2.x: the harness logged one warning and the entry died. Everything below the *Fixed in 0.2.2* section is what changed and why.
+This is **0.2.3** — the 0.2.2 repair release plus a refresh of the published numbers to the model's v1.1 figures (no code changes). The 0.1.2 plugin did not activate at all on DSH 0.2.x: the harness logged one warning and the entry died. Everything below the *Fixed in 0.2.2* section is what changed and why.
 
 ```sh
-dsh plugin --profile <name> add dsh-phocinae@0.2.2
+dsh plugin --profile <name> add dsh-phocinae@0.2.3
 ```
 
 Requires Node `^22.19` or `>=24`, and a reachable decision service (see [Running the decision service](#running-the-decision-service)).
@@ -21,7 +21,7 @@ Two separate things have to happen, and only the second one mounts the plugin:
 | step | what it does |
 |---|---|
 | `npm i dsh-phocinae` | Puts the package in **the current directory's** `node_modules`. Useful for reading the code or importing the guard directly. It does **not** reach any DSH profile. |
-| `dsh plugin --profile <name> add dsh-phocinae@0.2.2` | Adds it to **that profile's** `package.json` (`dependencies` **and** `dsh.profile.bundles`) and installs it there with pnpm. This is what makes the host mount it. |
+| `dsh plugin --profile <name> add dsh-phocinae@0.2.3` | Adds it to **that profile's** `package.json` (`dependencies` **and** `dsh.profile.bundles`) and installs it there with pnpm. This is what makes the host mount it. |
 
 Measured on this machine, with a throwaway `DSH_HOME`:
 
@@ -58,7 +58,7 @@ supply-chain attack looks like. It does mean **the version should be named**, bo
 to get the fixed build immediately and to make an install reproducible:
 
 ```sh
-dsh plugin --profile <name> add dsh-phocinae@0.2.2
+dsh plugin --profile <name> add dsh-phocinae@0.2.3
 ```
 
 If a bare add does land you on 0.1.2, `dsh <profile> --dump-config` shows which
@@ -67,7 +67,7 @@ version is mounted, and re-adding with the pinned spec replaces it.
 Git and local checkouts work the same way, and pin by construction:
 
 ```sh
-dsh plugin --profile <name> add github:Phocinae/dsh-phocinae#v0.2.2
+dsh plugin --profile <name> add github:Phocinae/dsh-phocinae#v0.2.3
 dsh plugin --profile <name> add /path/to/a/local/checkout
 ```
 
@@ -194,7 +194,7 @@ The accuracy reproduces within the release's own stated fp16/fp32 noise, and so 
 |---|---|---|
 | `noul` — "should this be blocked?" (0.1.2's default) | **0.00** | — |
 | `tri-state` — allow / ask / deny | **0.74** | 1 |
-| **`harm` — harmless / risky / destructive (0.2.2 default)** | **0.97** | **0** |
+| **`harm` — harmless / risky / destructive (0.2.3 default)** | **0.97** | **0** |
 
 The inherited boolean question is not merely weak, it is inverted: it passed **every one of the 31 destructive commands**, most with confidence between 0.54 and 0.80. Asking "is this safe?" is worse still — 27 of 31 passed with confidence as high as 0.87. The harm scale is the only formulation measured that both caught almost everything and never confidently waved a destructive command through.
 
@@ -204,7 +204,7 @@ Its one miss, `vssadmin delete shadows /all /quiet`, is caught by the auto-allow
 
 The model's confidence does not separate routine commands from risky ones well enough to be a general-purpose filter. Its `harmless` verdicts sit mostly in 0.27–0.54, so a gate that asked it about `git status` would send `git status` to a human.
 
-That is why `0.2.2` ships an **auto-allow list**: read-only and build/test commands with no shell operators never reach the model at all. The gate's job is to stop things, not to approve the routine:
+That is why `0.2.3` ships an **auto-allow list**: read-only and build/test commands with no shell operators never reach the model at all. The gate's job is to stop things, not to approve the routine:
 
 - names on the list, no operator → pass locally, no request, no latency
 - anything containing `;&|><`$(){}\[\]` etc. → the list is bypassed and the model decides

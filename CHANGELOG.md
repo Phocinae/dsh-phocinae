@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.3] — 2026-10-09
+
+### Changed
+
+- Published numbers refreshed to the model's v1.1 figures: typed-decisions en
+  0.906 / zh 0.848, and the E1 gate at τ=0.6 measured at −55.0% LLM calls (79.6%
+  at τ=0.5) with a 0.9936 kept-subset accuracy. Documentation only — no code
+  changes.
+
 ## [0.2.2] — 2026-10-08
 
 ### Fixed
