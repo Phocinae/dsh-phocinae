@@ -1,0 +1,61 @@
+name: CI
+
+# This repository is published to npm and its decision logic is explicitly
+# platform-aware: lib/constants.mjs carries Windows PowerShell read verbs and
+# cmd.exe metacharacter handling, lib/protocol.mjs notes that Remove-Item is
+# destructive on Windows, and the tests feed `platform: 'win32'` through the
+# payload. Passing the platform as data makes those paths testable anywhere, but
+# it does not prove the package runs on Windows — spawning, path handling,
+# quoting and console encoding are host behaviour, and none of it had ever been
+# exercised on a Windows runner. publish.yml runs on a tag, so before this file
+# there was no run at all on an ordinary push.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (node ${{ matrix.node }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ['22']
+        include:
+          # The engines field allows >=24 as well, so one run covers it.
+          - os: ubuntu-latest
+            node: '24'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Node and npm versions
+        run: node --version && npm --version
+
+      - name: Unit and contract tests
+        run: npm test
+
+      # The integration test starts a mock decision service over loopback, so it
+      # needs no model weights. Kept in a separate step so a failure says which
+      # layer broke rather than only that "the tests" failed.
+      - name: Gate-over-HTTP integration
+        run: node test/integration/gate-over-http.mjs
+
+      # A published tarball is the artifact users get; if the package manifest
+      # omits a file the suite imports, only this catches it.
+      - name: Packaging check (files list resolves)
+        run: npm pack --dry-run
