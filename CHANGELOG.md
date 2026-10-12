@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.2.5] — 2026-10-11
+
+### Fixed
+
+- **The auto-allow list admitted command launchers.** `find`, `env`, `fd` and `rg`
+  were prefix-matched, so `find / -delete`, `env sh -c "rm -rf /"`, `fd -x …` and
+  `rg --pre …` passed with no model in the loop — as did `make destroy-everything`,
+  because a `make` target is a command name chosen by the caller. All four verbs
+  are gone from the shipped list and `AUTO_ALLOW_EXACT` matches `make` and its
+  conventional targets as **whole** commands, so a caller-supplied target reaches
+  the gate.
+- **A tool call with no usable `exec.name` was allowed** (`tool-not-gated`), the
+  opposite of the documented contract: renaming that field turned every call,
+  `rm -rf /` included, into an ungated one. Such a payload now fails closed with
+  `tool-name-missing` and `escalate: true`.
+- A host that invoked the `tools/pre-execute` listener without a `next` callback
+  got a `TypeError` thrown out of the waterfall, aborting the run. The listener now
+  returns `ask` (`delegate-callback-missing`) when an allow cannot be delivered.
+- The operator pattern missed the cmd.exe metacharacters `%` and `^`, so
+  `git status %TEMP%` was auto-allowed whenever `gate.tools` covered a
+  cmd.exe-backed tool.
+
+### Changed
+
+- `test/contract.test.mjs` resolves the host's `@deepseek-ai/dsh-tools` from the
+  environment (Node resolution, then the npm global root) instead of a checked-in
+  absolute path from the maintainer's machine.
+- The reproduction section of `bench/REPORT-0.2.1-measurements.md` uses placeholder
+  paths instead of the author's local layout.
+
 ## [0.2.4] — 2026-10-09
 
 ### Changed

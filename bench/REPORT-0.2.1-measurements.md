@@ -196,8 +196,10 @@ per case 3,055.5 tokens  (每个用例问 5 个决策)
 
 ```powershell
 # 1. 起本地决策服务
-$env:PYTHONPATH = "D:\Projects\_phocinae\pylibs;D:\Projects\_phocinae\srv"
-$env:PHOC_MODEL_DIR = "D:\Projects\_phocinae\model"
+#    下面两行是**示例路径**：请换成你自己的 phocinae-server 仓库与模型目录。
+#    （PYTHONPATH 指到 server 仓的 pylibs / srv，PHOC_MODEL_DIR 指到权重目录。）
+$env:PYTHONPATH = "<your-phocinae-server-repo>\pylibs;<your-phocinae-server-repo>\srv"
+$env:PHOC_MODEL_DIR = "<path-to-model-dir>"
 python -m phocinae.main
 
 # 2. 主实验（400 例 × 2000 决策，本地 + 大模型对照）

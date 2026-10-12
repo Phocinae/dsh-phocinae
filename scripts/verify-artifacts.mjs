@@ -82,7 +82,10 @@ else fail(`cordis.patch.yml does not reference ${pkg.name}`)
 
 // --- nothing secret, local, or stale in the published files ----------------
 const SECRET = /(ghp_[A-Za-z0-9]{20,}|npm_[A-Za-z0-9]{20,}|hf_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})/
-const LOCAL_PATH = /[A-Za-z]:\\Users\\|\/Users\/[a-z]|_phocinae/
+// Matches maintainer-machine paths only. The `_phocinae` arm requires a path
+// separator so that a legitimate asset filename such as `logo_phocinae.png`
+// (and the `Phocinae` org/model names) is not reported as a local path.
+const LOCAL_PATH = /[A-Za-z]:\\Users\\|\/Users\/[a-z]|_phocinae[\\/]/
 const scanned = []
 for (const file of entryPoints) scanned.push(file)
 scanned.push('cordis.patch.yml', 'package.json')

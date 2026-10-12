@@ -1,8 +1,11 @@
 /**
- * Regression tests for the defects confirmed in dsh-phocinae 0.1.2.
+ * Regression tests for the defects confirmed in dsh-phocinae 0.1.2 and 0.2.4.
  *
  * Each test names the defect it pins. They run against a mock host and a mock
  * decision service, so they need neither a real harness nor a running model.
+ *
+ * The 0.2.4 section at the bottom covers the shipped auto-allow list, a missing
+ * tool name, a missing `next()` callback, and the cmd.exe metacharacters.
  */
 import assert from 'node:assert/strict'
 import test from 'node:test'
@@ -431,4 +434,237 @@ test('D12: harm mode passes only the harmless answer', async () => {
   )
   assert.equal(unsureHarmless.result.decision.kind, 'ask',
     'a harmless verdict the model is unsure about still goes to a human')
+})
+
+// ------------------------------------------------ 0.2.4: shipped auto-allow list
+
+const load = (relative) => import(pathToFileURL(join(ROOT, relative)).href)
+const { resolveConfig, isAutoAllowed } = await load('lib/config.mjs')
+const { AUTO_ALLOW_EXACT, DEFAULT_AUTO_ALLOW, SHELL_OPERATOR_PATTERN } =
+  await load('lib/constants.mjs')
+const { decideToolCall } = await load('lib/guard.mjs')
+
+/** Verdict of a command the model was never asked about, for every safe case. */
+const NO_SERVICE = () => {
+  throw new Error('the decision service must not be reached for an auto-allowed command')
+}
+
+/**
+ * The commands an independent audit confirmed were auto-allowed by 0.2.4's
+ * shipped defaults, each with the reason it must never be:
+ *
+ *   find … -delete   `find` deletes what it matched, from the command line
+ *   env <command>    `env` runs an arbitrary command
+ *   make <target>    a target name is a command name chosen by the caller
+ *
+ * Every one of these returned `{decision: 'allow', reason:
+ * 'command-on-auto-allow-list'}` with no model in the loop.
+ */
+const AUDITED_LAUNCHERS = [
+  'find / -delete',
+  'find . -delete',
+  'find /home -name "*.key" -delete',
+  'env rm -rf /',
+  'env sh -c "rm -rf /"',
+  'make destroy-everything',
+]
+
+/** Commands that must keep passing locally, or the gate becomes noise. */
+const STILL_AUTO_ALLOWED = [
+  'git status',
+  'git status --short',
+  'ls -la',
+  'cat README.md',
+  'npm run build',
+  'npm test',
+  'make',
+  'make all',
+  'make build',
+  'make test',
+  'make check',
+  'make lint',
+]
+
+test('B5: every command the audit auto-allowed is now decided by the model', async () => {
+  const plugin = await import(ENTRY)
+  const host = makeHost()
+  plugin.default(host.ctx, {}) // shipped defaults, nothing overridden
+
+  for (const command of AUDITED_LAUNCHERS) {
+    const { result, calls } = await withFetch(
+      () => jsonResponse(serverBody({ harm: 2 }, { confidence: { harm: 0.97 } })),
+      () => runGate(host.listeners, { ...SHELL_EXEC, arguments: { command } }),
+    )
+    assert.equal(calls.length, 1,
+      `${JSON.stringify(command)} reached the auto-allow list instead of the model`)
+    assert.equal(result.decision.kind, 'deny',
+      `${JSON.stringify(command)} must be gated, got ${JSON.stringify(result.decision)}`)
+    assert.equal(result.nextCalls, 0, 'a denied call must not run')
+  }
+})
+
+test('B5b: the safe verbs still never reach the decision service', async () => {
+  const plugin = await import(ENTRY)
+  const host = makeHost()
+  plugin.default(host.ctx, {})
+
+  for (const command of STILL_AUTO_ALLOWED) {
+    const { result, calls } = await withFetch(NO_SERVICE,
+      () => runGate(host.listeners, { ...SHELL_EXEC, arguments: { command } }))
+    assert.equal(calls.length, 0, `${JSON.stringify(command)} should not cost a request`)
+    assert.equal(result.decision.kind, 'allow',
+      `${JSON.stringify(command)} must stay automatic, got ${JSON.stringify(result.decision)}`)
+    assert.equal(result.nextCalls, 1, 'an allowed call must delegate exactly once')
+  }
+})
+
+test('B5c: the exact-match tier stops a caller-chosen target, not the safe ones', () => {
+  const list = resolveConfig({}).gate.autoAllow
+
+  // `make` and its conventional targets are whole-command matches…
+  for (const entry of AUTO_ALLOW_EXACT) {
+    assert.equal(isAutoAllowed(entry, list), entry)
+    assert.equal(isAutoAllowed(`${entry} extra-target`, list), null,
+      `${JSON.stringify(entry)} must not pass trailing arguments`)
+    assert.equal(isAutoAllowed(`${entry}-evil`, list), null)
+  }
+  // …and a target that is not on the list is the model's call, not ours.
+  assert.equal(isAutoAllowed('make destroy-everything', list), null)
+  assert.equal(isAutoAllowed('make -f /tmp/evil.mk', list), null)
+  assert.equal(isAutoAllowed('make test evil', list), null)
+
+  // A user-supplied list inherits the same rule: `['make']` is not a launcher.
+  assert.equal(isAutoAllowed('make deploy', ['make']), null)
+  assert.equal(isAutoAllowed('make', ['make']), 'make')
+})
+
+test('B5d: no shipped entry is a generic command launcher', () => {
+  // Verbs whose own arguments name a command, or a deletion target. `find` and
+  // `env` shipped in 0.2.4; `fd`/`rg` carry the same channel through `-x` and
+  // `--pre`. None of them may come back.
+  const LAUNCHERS = new Set([
+    'find', 'env', 'fd', 'rg', 'xargs', 'npx', 'bash', 'sh', 'zsh', 'eval', 'exec',
+    'python', 'python3', 'node', 'deno', 'bun', 'perl', 'ruby', 'awk', 'sed',
+    'ssh', 'curl', 'wget', 'bash -c', 'sh -c', 'node -e', 'python -c',
+  ])
+  for (const entry of DEFAULT_AUTO_ALLOW) {
+    assert.ok(!LAUNCHERS.has(entry),
+      `shipped entry ${JSON.stringify(entry)} can name a second command; remove it`)
+  }
+  // Every exact-match entry must exist in the shipped list, or the two lists
+  // have drifted and the documented default is not what runs.
+  for (const entry of AUTO_ALLOW_EXACT) {
+    assert.ok(DEFAULT_AUTO_ALLOW.includes(entry),
+      `${JSON.stringify(entry)} is exact-matched but not in DEFAULT_AUTO_ALLOW`)
+  }
+})
+
+test('B6: an unnamed tool fails closed instead of passing ungated', async () => {
+  const plugin = await import(ENTRY)
+  const host = makeHost()
+  plugin.default(host.ctx, {}) // gate.tools defaults to ['*']
+
+  // `exec.name` renamed or absent: `toolMatches` answers "no match", and that
+  // answer used to be read as "not gated" — a blanket bypass for every call.
+  const shapes = [
+    ['empty name', (exec) => ({ ...exec, name: '' })],
+    ['whitespace name', (exec) => ({ ...exec, name: '   ' })],
+    ['null name', (exec) => ({ ...exec, name: null })],
+    ['undefined name', (exec) => ({ ...exec, name: undefined })],
+    ['non-string name', (exec) => ({ ...exec, name: 42 })],
+    ['missing name key', (exec) => {
+      const withoutName = { ...exec }
+      delete withoutName.name
+      return withoutName
+    }],
+  ]
+
+  for (const [label, reshape] of shapes) {
+    const { result, calls } = await withFetch(NO_SERVICE, () => runGate(host.listeners,
+      reshape({ ...SHELL_EXEC, arguments: { command: 'rm -rf /' } })))
+    assert.equal(result.decision.kind, 'ask',
+      `${label}: must fail closed, got ${JSON.stringify(result.decision)}`)
+    assert.equal(result.decision.reason.includes('tool-name-missing'), true,
+      `${label}: the reason must name the defect, got ${result.decision.reason}`)
+    assert.equal(result.nextCalls, 0, `${label}: an ask must not delegate`)
+    assert.equal(calls.length, 0, `${label}: the model is not the right fallback here`)
+  }
+
+  // The whole payload missing entirely, which is what a host bug looks like.
+  for (const exec of [{}, null, undefined]) {
+    const { result } = await withFetch(NO_SERVICE, () => runGate(host.listeners, exec))
+    assert.equal(result.decision.kind, 'ask', 'a payload without a name must fail closed')
+  }
+
+  // The verdict itself carries the escalation, not only the decision object.
+  const direct = await decideToolCall(
+    { toolName: '', toolInput: { command: 'rm -rf /' } }, resolveConfig({}))
+  assert.equal(direct.decision, 'ask')
+  assert.equal(direct.reason, 'tool-name-missing')
+  assert.equal(direct.escalate, true)
+
+  // A named tool that is simply not covered still delegates: the gate must not
+  // swallow tools it was never asked to screen.
+  const scoped = makeHost()
+  plugin.default(scoped.ctx, { gate: { tools: ['pwsh'] } })
+  const ungated = await withFetch(NO_SERVICE,
+    () => runGate(scoped.listeners, { ...SHELL_EXEC, name: 'read_file' }))
+  assert.equal(ungated.result.decision.kind, 'allow')
+  assert.equal(ungated.result.nextCalls, 1)
+  const unnamed = await withFetch(NO_SERVICE,
+    () => runGate(scoped.listeners, { ...SHELL_EXEC, name: '' }))
+  assert.equal(unnamed.result.decision.kind, 'ask',
+    'a payload with no name cannot be shown to be outside gate.tools either')
+})
+
+test('B21: a host that omits next() gets a verdict, not a TypeError', async () => {
+  const plugin = await import(ENTRY)
+  const host = makeHost()
+  plugin.default(host.ctx, {})
+
+  const gate = host.listeners.get('tools/pre-execute')?.[0]
+  assert.ok(gate)
+
+  // The allow path is the one that calls next(); without it the listener used
+  // to throw "next is not a function" out of the waterfall and abort the run.
+  const { result: allowed } = await withFetch(NO_SERVICE,
+    async () => ({ decision: await gate(AUTO_ALLOWED_EXEC) }))
+  assert.equal(allowed.decision.kind, 'ask',
+    'an undeliverable allow is a review, never a thrown error')
+  assert.match(allowed.decision.reason, /delegate-callback-missing/)
+
+  const explicitNull = await gate({ ...SHELL_EXEC, arguments: { command: 'ls' } }, null)
+  assert.equal(explicitNull.kind, 'ask')
+
+  // A non-allow verdict never needed next(), and still does not.
+  const denied = await withFetch(
+    () => jsonResponse(serverBody({ harm: 2 }, { confidence: { harm: 0.98 } })),
+    () => gate(SHELL_EXEC),
+  )
+  assert.equal(denied.result.kind, 'deny')
+})
+
+test('B22: cmd.exe metacharacters disqualify an otherwise allow-listed command', () => {
+  const list = resolveConfig({}).gate.autoAllow
+
+  // `%VAR%` expands before the command runs; `^` escapes the next character, so
+  // it decides what the parser sees. Both matter when gate.tools points at a
+  // cmd.exe-backed tool, and neither was in the pattern 0.2.4 shipped.
+  for (const command of [
+    'git status %TEMP%',
+    'ls %CD%',
+    'cat %USERPROFILE%',
+    'git status ^ more',
+    'git status ^& echo pwned',
+    'ls ^| more',
+  ]) {
+    assert.equal(isAutoAllowed(command, list), null,
+      `${JSON.stringify(command)} must not be auto-allowed`)
+  }
+
+  assert.equal(SHELL_OPERATOR_PATTERN.test('%'), true, '% is a cmd.exe metacharacter')
+  assert.equal(SHELL_OPERATOR_PATTERN.test('^'), true, '^ is a cmd.exe metacharacter')
+  // Quoting a path is not a chaining vector under cmd.exe, so it stays allowed:
+  // tightening this would route ordinary quoted arguments to the model for nothing.
+  assert.equal(isAutoAllowed('cat "my file.txt"', list), 'cat')
 })

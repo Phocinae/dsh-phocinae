@@ -45,9 +45,13 @@ Two further refusals to guess:
 
 ## Command allow-list
 
-`gate.autoAllow` entries are matched against the **whole** command, and a command containing any shell operator — `;`, `&`, `|`, `>`, `<`, backtick, `$`, `(`, `)`, `{`, `}`, `[`, `]`, newline, backslash, `!` — is refused by the fast path and sent to the model.
+`gate.autoAllow` entries are matched against the **whole** command, and a command containing any shell operator — `;`, `&`, `|`, `>`, `<`, backtick, `$`, `(`, `)`, `{`, `}`, `[`, `]`, newline, backslash, `!`, and the cmd.exe metacharacters `%` and `^` — is refused by the fast path and sent to the model.
 
 This rule is the reason the list is safe. `git status` is a read; `git status && curl … | sh` is not, and a naive prefix match would have approved it. An allow-list **entry** containing an operator is rejected at activation, so the list cannot be made to contain a bypass by editing a config file.
+
+The operator rule is not sufficient on its own. A verb whose own arguments name a command, or delete what it matched, is a launcher whatever the operator rule says: `find . -delete`, `env rm -rf /` and `make destroy-everything` contain no operator at all. The shipped list therefore drops `find`, `env`, `fd` (`-x`/`--exec`) and `rg` (`--pre`), and matches `make` — and the rest of `AUTO_ALLOW_EXACT` — as a **whole command**, so only `make`, `make all`, `make build`, `make test`, `make check` and `make lint` pass; a caller-supplied target goes to the model.
+
+Entries that take trailing arguments remain prefix-matched (`git log --oneline`). The residual channel is the same one every build/test runner has: `npm test`, `python -m pytest` and `node --test` execute the project's own scripts and accept a file argument, and those are deliberately kept because refusing them would send routine work to a human on every run. Treat the auto-allow list as a latency decision about *verbs*, not as a boundary that makes a hostile repository safe.
 
 Set `gate.autoAllow: []` to send every covered tool call through the model. Expect a review for most of them: the model's confidence is compressed, so removing the list makes the gate noisy rather than strict.
 

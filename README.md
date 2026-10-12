@@ -1,8 +1,29 @@
 **English** · [中文](./README-zh.md) · [Español](./README-es.md) · [Português](./README-pt.md) · [हिन्दी](./README-hi.md)
 
+<img src="docs/assets/logo_phocinae.png" width="150" alt="斑海豹 Phocinae logo">
+
 # dsh-phocinae
 
-**A local, non-generative decision layer for DeepSeek Harness.**
+**A local, non-generative decision layer for DeepSeek Harness.** Plugins `phocinae_ask` and `phocinae_gate`.
+
+<p>
+  <img alt="npm" src="https://img.shields.io/static/v1?label=npm&message=dsh-phocinae&color=CB3837&style=flat-square">
+  <img alt="dsh" src="https://img.shields.io/static/v1?label=dsh&message=%3E%3D0.1.6&color=1f6feb&style=flat-square">
+  <img alt="gate" src="https://img.shields.io/static/v1?label=gate&message=fail-closed&color=critical&style=flat-square">
+  <img alt="License" src="https://img.shields.io/static/v1?label=License&message=Apache-2.0&color=blue&style=flat-square">
+</p>
+
+<img src="docs/assets/dsh_manifest.png" width="880" alt="Plugin manifest (the dsh section of package.json)">
+<p><sub>▲ Read from the real <code>package.json</code>: <code>bundle.patch</code> points at <code>cordis.patch.yml</code>, and <code>engines</code> constrains both node and dsh.</sub></p>
+
+<img src="docs/assets/S01_rmrf_gate.gif" width="880" alt="Dangerous-command gate demo animation">
+<p><sub>▲ **Synthetic demo animation** (model repo docs/gallery S01): frames are rendered and the scenario data is fictional, but the behaviour it shows — a dangerous command being stopped in milliseconds — is what this plugin's gate does; the terminal card further down is a real run.</sub></p>
+
+<img src="docs/assets/dsh_tests.png" width="880" alt="Unit and contract tests, real run">
+<p><sub>▲ Real <code>node --test</code> result: 57/57, including the auto-allow boundary and the unnamed-tool fail-closed regression.</sub></p>
+
+<img src="docs/assets/dsh_package.png" width="880" alt="Publish artifact self-check">
+<p><sub>▲ <code>verify-artifacts</code>: free of credentials and local paths, and lists what npm would actually ship.</sub></p>
 
 `phocinae_ask` / `phocinae_gate` tools backed by a [Phocinae-Largha-150M-v1](https://huggingface.co/Phocinae/Phocinae-Largha-150M-v1) server — yes/no judgements, single-choice picks and 2-10 scores, one forward pass each, on your own machine — plus a fail-closed approval gate that screens tool calls before they run.
 
@@ -209,12 +230,13 @@ The model's confidence does not separate routine commands from risky ones well e
 That is why `0.2.4` ships an **auto-allow list**: read-only and build/test commands with no shell operators never reach the model at all. The gate's job is to stop things, not to approve the routine:
 
 - names on the list, no operator → pass locally, no request, no latency
-- anything containing `;&|><`$(){}\[\]` etc. → the list is bypassed and the model decides
+- anything containing `;&|><`$(){}\[\]%^` etc. → the list is bypassed and the model decides
+- a verb whose own arguments name a command, or delete what it matched (`find`, `env`) → not on the list at all; a caller-supplied `make` target goes to the model
 - model says `destructive` → deny
 - model says `risky`, or `harmless` below `gate.minConfidence` → a human decides
 - service unreachable → a human decides
 
-An entry containing a shell operator is refused at load time. `git status && rm -rf /` starts with an allow-listed prefix, so accepting such a pattern would build a bypass into the list.
+An entry containing a shell operator is refused at load time. `git status && rm -rf /` starts with an allow-listed prefix, so accepting such a pattern would build a bypass into the list. The operator rule is not the whole story either: `find . -delete` and `env rm -rf /` contain no operator, which is why those verbs are not on the list and why `make` passes only as a whole, known-safe invocation.
 
 ### Honest summary of the claims
 

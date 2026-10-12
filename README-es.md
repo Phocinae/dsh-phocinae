@@ -1,6 +1,17 @@
 **English** · [中文](./README-zh.md) · [Español](./README-es.md) · [Português](./README-pt.md) · [हिन्दी](./README-hi.md)
 
+<img src="docs/assets/logo_phocinae.png" width="150" alt="Logotipo de Phocinae">
+
 # dsh-phocinae
+
+<img src="docs/assets/dsh_manifest.png" width="880" alt="▲ Leído del <code>package.json</code> real: <code>bundle.patch</code> apunta a <code>cordis.patch.yml</code> y <code>engines</code> restringe node y dsh.">
+<p><sub>▲ Leído del <code>package.json</code> real: <code>bundle.patch</code> apunta a <code>cordis.patch.yml</code> y <code>engines</code> restringe node y dsh.</sub></p>
+
+<img src="docs/assets/S01_rmrf_gate.gif" width="880" alt="Animación de demostración del bloqueo de comandos peligrosos">
+<p><sub>▲ <b>Animación sintética</b> (docs/gallery S01 del repo del modelo): fotogramas renderizados y datos ficticios, pero el comportamiento que muestra es el del gate de este plugin.</sub></p>
+
+<img src="docs/assets/dsh_tests.png" width="880" alt="Pruebas unitarias y de contrato (ejecución real)">
+<p><sub>▲ Resultado real de <code>node --test</code>: 57/57, incluida la frontera de la lista de auto-permiso y la regresión fail-closed de la herramienta sin nombre.</sub></p>
 
 **Una capa de decisión local y no generativa para DeepSeek Harness.**
 
@@ -210,12 +221,13 @@ La confianza del modelo no separa los comandos rutinarios de los peligrosos lo b
 Por eso la `0.2.4` incluye una **lista de auto-permiso**: los comandos de solo lectura y de compilación/pruebas sin operadores de shell no llegan siquiera al modelo. El trabajo de la puerta es detener cosas, no aprobar lo rutinario:
 
 - nombres en la lista, sin operador → pasan en local, sin petición, sin latencia
-- cualquier cosa que contenga `;&|><`$(){}\[\]` etc. → se omite la lista y decide el modelo
+- cualquier cosa que contenga `;&|><`$(){}\[\]%^` etc. → se omite la lista y decide el modelo
+- un verbo cuyos propios argumentos nombran un comando, o borran lo que coincidió (`find`, `env`) → no está en la lista; un objetivo de `make` dado por quien llama va al modelo
 - el modelo dice `destructive` → deny
 - el modelo dice `risky`, o `harmless` por debajo de `gate.minConfidence` → decide una persona
 - servicio inaccesible → decide una persona
 
-Una entrada que contenga un operador de shell se rechaza en el momento de la carga. `git status && rm -rf /` empieza por un prefijo que está en la lista de permiso, así que aceptar ese patrón construiría un bypass dentro de la propia lista.
+Una entrada que contenga un operador de shell se rechaza en el momento de la carga. `git status && rm -rf /` empieza por un prefijo que está en la lista de permiso, así que aceptar ese patrón construiría un bypass dentro de la propia lista. La regla de operadores tampoco lo es todo: `find . -delete` y `env rm -rf /` no contienen ningún operador, y por eso esos verbos no están en la lista y `make` solo pasa como invocación completa y conocida como segura.
 
 ### Resumen honesto de las afirmaciones
 

@@ -13,6 +13,7 @@
  */
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { homedir } from 'node:os'
 import { pathToFileURL } from 'node:url'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -20,11 +21,50 @@ import { fileURLToPath } from 'node:url'
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
 const { createTools } = await import(pathToFileURL(join(ROOT, 'tools.mjs')).href)
 const { resolveConfig } = await import(pathToFileURL(join(ROOT, 'lib/config.mjs')).href)
-const { assertSupportedJsonSchema, validateJsonSchemaValue } =
-  await import(pathToFileURL(join(
-    'C:/Users/zzhdz/AppData/Roaming/npm/node_modules/@deepseek-ai/dsh/node_modules',
-    '@deepseek-ai/dsh-tools/lib/index.js',
-  )).href).catch(() => ({}))
+
+/**
+ * The host's `@deepseek-ai/dsh-tools`, when this machine has it.
+ *
+ * Resolved from the environment rather than from a checked-in absolute path: a
+ * hard-coded `C:/Users/<name>/...` leaks the maintainer's machine layout into a
+ * public repository and silently stops resolving for everyone else. Node's own
+ * resolution is tried first (the normal install), then the npm global root,
+ * which `npm` reports through `APPDATA` / the prefix it was configured with.
+ * Nothing found → `{}`, and the two tests that need host internals skip.
+ */
+async function loadHostTools() {
+  const candidates = []
+  try {
+    const { createRequire } = await import('node:module')
+    candidates.push(createRequire(import.meta.url).resolve('@deepseek-ai/dsh-tools/lib/index.js'))
+  } catch { /* not installed next to this checkout */ }
+
+  const globalRoots = [
+    process.env.APPDATA && join(process.env.APPDATA, 'npm', 'node_modules'),
+    process.env.npm_config_prefix && join(process.env.npm_config_prefix, 'lib', 'node_modules'),
+    process.env.PREFIX && join(process.env.PREFIX, 'lib', 'node_modules'),
+    join(homedir(), 'AppData', 'Roaming', 'npm', 'node_modules'),
+    join(homedir(), '.npm-global', 'lib', 'node_modules'),
+    '/usr/local/lib/node_modules',
+    '/usr/lib/node_modules',
+  ].filter(Boolean)
+
+  for (const root of globalRoots) {
+    // npm hoists what it can and nests what it must, so both shapes are real.
+    candidates.push(join(root, '@deepseek-ai/dsh-tools/lib/index.js'))
+    candidates.push(join(root, '@deepseek-ai/dsh/node_modules',
+      '@deepseek-ai/dsh-tools/lib/index.js'))
+  }
+
+  for (const candidate of candidates) {
+    try {
+      return await import(pathToFileURL(candidate).href)
+    } catch { /* try the next candidate */ }
+  }
+  return {}
+}
+
+const { assertSupportedJsonSchema, validateJsonSchemaValue } = await loadHostTools()
 
 const TOOLS = createTools(resolveConfig({}), undefined, { platform: 'test', cwd: '/w' })
 

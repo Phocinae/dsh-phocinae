@@ -1,6 +1,17 @@
 **English** · [中文](./README-zh.md) · [Español](./README-es.md) · [Português](./README-pt.md) · [हिन्दी](./README-hi.md)
 
+<img src="docs/assets/logo_phocinae.png" width="150" alt="斑海豹 Phocinae 标志">
+
 # dsh-phocinae
+
+<img src="docs/assets/dsh_manifest.png" width="880" alt="▲ 真实读取 <code>package.json</code> 的 <code>dsh</code> 段：<code>bundle.patch</code> 指向 <code>cordis.patch.yml</code>，<code>engines</code> 同时约束 node 与 dsh 版本。">
+<p><sub>▲ 真实读取 <code>package.json</code> 的 <code>dsh</code> 段：<code>bundle.patch</code> 指向 <code>cordis.patch.yml</code>，<code>engines</code> 同时约束 node 与 dsh 版本。</sub></p>
+
+<img src="docs/assets/S01_rmrf_gate.gif" width="880" alt="危险命令拦截演示动画">
+<p><sub>▲ <b>合成演示动画</b>（模型仓 docs/gallery S01）：逐帧渲染、场景数据虚构，但演示的「危险命令毫秒级被拦下」与本插件 gate 的行为一致。</sub></p>
+
+<img src="docs/assets/dsh_tests.png" width="880" alt="单元与契约测试（真实运行）">
+<p><sub>▲ <code>node --test</code> 真实结论：57/57 全过，含自动放行表边界与未命名工具 fail-closed 回归。</sub></p>
 
 **DeepSeek Harness 的本地、非生成式决策层。**
 
@@ -206,12 +217,13 @@ zh 数字为机译用例；训练混料含机译中文 ≈2,400 行＋原生中�
 这就是 `0.2.4` 附带一份**自动放行列表**的原因：不含 shell 运算符的只读命令以及构建/测试命令根本不会到达模型。审批门的职责是拦截，而不是批准常规操作：
 
 - 名称在列表上且不含运算符 → 本地放行，不发请求，没有延迟
-- 任何包含 `;&|><`$(){}\[\]` 等字符的内容 → 绕过该列表，由模型决定
+- 任何包含 `;&|><`$(){}\[\]%^` 等字符的内容 → 绕过该列表，由模型决定
+- 自身参数就能指定命令、或能删除匹配结果的动词（`find`、`env`）→ 根本不在列表上；`make` 的目标由调用方给出，同样交给模型
 - 模型判定为 `destructive` → 拒绝
 - 模型判定为 `risky`，或判定为 `harmless` 但低于 `gate.minConfidence` → 由人工决定
 - 服务不可达 → 由人工决定
 
-包含 shell 运算符的条目会在加载时被拒绝。`git status && rm -rf /` 以允许列表中的前缀开头，所以接受这样的模式就等于在列表里开了一个后门。
+包含 shell 运算符的条目会在加载时被拒绝。`git status && rm -rf /` 以允许列表中的前缀开头，所以接受这样的模式就等于在列表里开了一个后门。运算符规则本身也不够：`find . -delete` 和 `env rm -rf /` 里一个运算符都没有——这正是这两个动词不在列表上、而 `make` 只接受完整的安全调用的原因。
 
 ### 对各项宣称的诚实总结
 

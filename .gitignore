@@ -1,8 +1,61 @@
+# ---- Node dependencies ----
 node_modules/
-dev/
-*.tmp
-.rc6-check/
+jspm_packages/
+
+# ---- Build / pack output ----
 *.tgz
+dist/
+build/
+.npm/
+.cache/
+
+# ---- Logs & local runtime state ----
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+pnpm-error.log*
+.npmrc
+
+# ---- Environment / credentials ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- Test / coverage output ----
+coverage/
+.nyc_output/
+*.lcov
+
+# ---- Scratch dirs used by this repo's bench + release tooling ----
+dev/
+.rc6-check/
+*.tmp
+
 # Local release driver: it reads the workspace's plaintext credential file by
 # path, so it must never be committed.
 release.mjs
+# Local decision-service overrides / audit state
+guard.conf.json
+phocinae-guard.audit.jsonl
+.phocinae-guard.audit.jsonl
+audit.jsonl
+
+# ---- Editor / OS junk ----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

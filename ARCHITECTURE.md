@@ -73,7 +73,16 @@ The built-in bias of each phrasing is the whole story. A boolean safety question
 
 The model's confidence is compressed. Across every formulation tried, the confidence of a correct "nothing to see here" verdict sits mostly between 0.27 and 0.54. There is no bar at which its approval becomes a reliable general-purpose filter.
 
-The consequence is a design choice, not a tuning problem: the gate stops things, and a static list carries the routine. The list holds read-only and build/test verbs, and an entry containing a shell operator is refused at configuration time, because `git status && rm -rf /` begins with an allow-listed prefix and a prefix match on the first word says nothing about what follows.
+The consequence is a design choice, not a tuning problem: the gate stops things, and a static list carries the routine. The list holds non-launcher verbs — read-only inspection, or a build/test runner that runs the project's own scripts — and an entry containing a shell operator is refused at configuration time, because `git status && rm -rf /` begins with an allow-listed prefix and a prefix match on the first word says nothing about what follows.
+
+Two entry kinds, because a prefix is the wrong match for a launcher:
+
+| kind | matched as | example |
+|---|---|---|
+| prefix (default) | the command starts with the entry, arguments allowed | `git status --short` |
+| whole command (`AUTO_ALLOW_EXACT`) | the command *is* the entry | `make` / `make test` pass, `make destroy-everything` does not |
+
+An entry whose own arguments can name a second command, or delete what it matched, is a hole rather than an optimisation. `find` (`-exec`, `-delete`), `env` (runs a command), `fd -x` and `rg --pre` are absent for that reason, and `make` — whose target name is a command name chosen by the caller — is whole-command matched against a fixed target list. Adding an entry therefore means asking what its *arguments* can do, not only what the bare verb does.
 
 ## The escalation signal
 
@@ -90,6 +99,8 @@ Nothing in this plugin is allowed to fail quietly.
 | illegal configuration | throws at activation, naming the key and the value |
 | non-loopback endpoint | throws at activation unless explicitly allowed |
 | allow-list entry containing a shell operator | throws at activation |
+| a tool call with no usable `exec.name` | gate: `ask` with `tool-name-missing`. An unnamed tool matches no `gate.tools` pattern, and "matches nothing" must never read as "is not gated" — that reading is a bypass the moment a host renames the field |
+| the host calls the listener without `next()` | gate: `ask` with `delegate-callback-missing`. An allow that cannot be delivered is a review; throwing a `TypeError` out of the waterfall would abort the run instead |
 | decision service unreachable or slow | gate: `ask`; tool: `PHOCINAE_SERVICE_UNAVAILABLE` naming the command to start it |
 | service answers non-2xx | structured error carrying the status |
 | body not JSON, `answers` not an object, answer missing or out of range | structured error; the gate treats it as unreachable and asks |

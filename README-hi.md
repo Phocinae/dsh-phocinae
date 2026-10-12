@@ -1,6 +1,17 @@
 **English** · [中文](./README-zh.md) · [Español](./README-es.md) · [Português](./README-pt.md) · [हिन्दी](./README-hi.md)
 
+<img src="docs/assets/logo_phocinae.png" width="150" alt="Phocinae लोगो">
+
 # dsh-phocinae
+
+<img src="docs/assets/dsh_manifest.png" width="880" alt="▲ असली <code>package.json</code> से पढ़ा गया: <code>bundle.patch</code> <code>cordis.patch.yml</code> की ओर इशारा करता है और <code>engines</code> node तथा dsh दोनों को सीमित करता है।">
+<p><sub>▲ असली <code>package.json</code> से पढ़ा गया: <code>bundle.patch</code> <code>cordis.patch.yml</code> की ओर इशारा करता है और <code>engines</code> node तथा dsh दोनों को सीमित करता है।</sub></p>
+
+<img src="docs/assets/S01_rmrf_gate.gif" width="880" alt="खतरनाक कमांड रोकने का डेमो एनिमेशन">
+<p><sub>▲ <b>सिंथेटिक डेमो एनिमेशन</b> (मॉडल रेपो का docs/gallery S01): फ़्रेम रेंडर किए गए हैं और डेटा काल्पनिक है, पर दिखाया गया व्यवहार इस प्लगइन के gate जैसा ही है।</sub></p>
+
+<img src="docs/assets/dsh_tests.png" width="880" alt="यूनिट और कॉन्ट्रैक्ट परीक्षण (वास्तविक रन)">
+<p><sub>▲ <code>node --test</code> का वास्तविक परिणाम: 57/57, जिसमें ऑटो-अनुमति सीमा और बिना नाम वाले टूल का fail-closed रिग्रेशन शामिल है।</sub></p>
 
 **DeepSeek Harness के लिए एक स्थानीय, नॉन-जनरेटिव decision layer।**
 
@@ -209,12 +220,13 @@ Model की confidence routine commands को risky commands से इतन�
 इसीलिए `0.2.4` एक **auto-allow list** के साथ आता है: बिना shell operator वाले read-only और build/test commands model तक पहुँचते ही नहीं। Gate का काम चीज़ों को रोकना है, नियमित कामों को approve करना नहीं:
 
 - list में नाम है, कोई operator नहीं → local पर ही pass, न request, न latency
-- ऐसा कुछ भी जिसमें `;&|><`$(){}\[\]` आदि हों → list bypass हो जाती है और फैसला model करता है
+- ऐसा कुछ भी जिसमें `;&|><`$(){}\[\]%^` आदि हों → list bypass हो जाती है और फैसला model करता है
+- ऐसा verb जिसके अपने arguments ही कोई command बताते हैं, या जो match हुई चीज़ें मिटा देता है (`find`, `env`) → list में ही नहीं है; `make` का target caller देता है, इसलिए वह भी model के पास जाता है
 - model कहे `destructive` → deny
 - model कहे `risky`, या `harmless` `gate.minConfidence` से नीचे → फैसला इंसान करता है
 - service unreachable → फैसला इंसान करता है
 
-Shell operator वाली entry load के समय ही ठुकरा दी जाती है। `git status && rm -rf /` एक allow-listed prefix से शुरू होता है, इसलिए ऐसा pattern स्वीकार करना list में ही एक bypass बना देता।
+Shell operator वाली entry load के समय ही ठुकरा दी जाती है। `git status && rm -rf /` एक allow-listed prefix से शुरू होता है, इसलिए ऐसा pattern स्वीकार करना list में ही एक bypass बना देता। सिर्फ़ operator नियम काफ़ी नहीं है: `find . -delete` और `env rm -rf /` में एक भी operator नहीं है — इसीलिए ये verbs list में नहीं हैं और `make` सिर्फ़ पूरे, ज्ञात-सुरक्षित invocation के रूप में pass होता है।
 
 ### दावों का ईमानदार सार
 
