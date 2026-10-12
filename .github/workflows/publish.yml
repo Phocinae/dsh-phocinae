@@ -10,7 +10,34 @@ on:
     tags: ['v*']
 
 jobs:
+  # A tag must not publish something that was only ever exercised on Linux. The
+  # decision logic here is platform-aware (PowerShell read verbs, cmd.exe
+  # metacharacters, Remove-Item), and this job previously ran `npm test` on
+  # ubuntu-latest alone — so a Windows-only defect could reach the registry with
+  # the publish job green. The matrix mirrors ci.yml; publish waits for it.
+  verify:
+    name: verify (node ${{ matrix.node }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ['22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Unit and contract tests
+        run: npm test
+
+      - name: Gate-over-HTTP integration
+        run: node test/integration/gate-over-http.mjs
+
   publish:
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -25,12 +52,9 @@ jobs:
           # into .npmrc, and an empty bearer token makes the registry answer 404 on
           # PUT instead of letting npm perform the OIDC trusted-publishing exchange.
 
-      - name: Unit and contract tests
-        run: npm test
-
-      - name: Gate-over-HTTP integration
-        run: node test/integration/gate-over-http.mjs
-
+      # The suites themselves now run in the `verify` job across three platforms,
+      # which this job waits on. Repeating them here would only re-test ubuntu.
+      #
       # Trusted publishing needs npm >= 11.5.1. The diagnostics make a failure
       # self-explanatory: npm swallows OIDC exchange errors unless verbose.
       - name: Upgrade npm and show what the publish will authenticate with
